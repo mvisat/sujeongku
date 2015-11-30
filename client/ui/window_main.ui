@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>window_main</class>
+ <widget class="QMainWindow" name="window_main">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -7867,12 +7867,12 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
-             <widget class="QPushButton" name="button_create">
+             <widget class="QPushButton" name="button_spectate">
               <property name="enabled">
                <bool>false</bool>
               </property>
               <property name="text">
-               <string>Create</string>
+               <string>Spectate</string>
               </property>
              </widget>
             </item>
@@ -7899,15 +7899,59 @@
               </property>
              </spacer>
             </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_9">
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_room_2">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Room Name:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="text_room">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="0,0">
+            <property name="topMargin">
+             <number>0</number>
+            </property>
             <item>
-             <widget class="QPushButton" name="button_spectate">
+             <widget class="QPushButton" name="button_create">
               <property name="enabled">
                <bool>false</bool>
               </property>
               <property name="text">
-               <string>Spectate</string>
+               <string>Create</string>
               </property>
              </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_4">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </item>
