@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>480</height>
+    <width>518</width>
+    <height>383</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
       <string/>
      </property>
      <property name="pixmap">
-      <pixmap>about_1.jpg</pixmap>
+      <pixmap>about_1_resize_500.png</pixmap>
      </property>
      <property name="scaledContents">
       <bool>false</bool>
