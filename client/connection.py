@@ -2,11 +2,11 @@
 import socket
 import select
 
-
+from common import protocol
 
 class connection():
 
-    def __init__(self, host="localhost", port=9999, buf_size=4096):
+    def __init__(self, host, port, buf_size=4096):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.host = host
         self.port = port
@@ -27,18 +27,22 @@ class connection():
                 self.close()
 
     def recv(self):
-        val = ""
+        val = []
         self.ready_to_read = False
         if self.connected:
             try:
-                ready_to_reads, _, _ = select.select([self.socket], [], [], 0.5)
-                if self.socket in ready_to_reads:
-                    self.ready_to_read = True
-                    val = self.socket.recv(self.buf_size).decode('utf-8')
-                    self.__verbose and print("Received", len(val), "bytes:", val.strip())
+                while True:
+                    ready_to_reads, _, _ = select.select([self.socket], [], [], 0.5)
+                    if self.socket in ready_to_reads:
+                        self.ready_to_read = True
+                        recv_msg = self.socket.recv(self.buf_size).decode('utf-8')
+                        val.append(recv_msg)
+                        self.__verbose and print("Received", len(recv_msg), "bytes:", recv_msg.strip())
+                        if recv_msg.endswith(protocol.PROTO_END):
+                            break
             except select.error:
                 pass
-        return val
+        return "".join(val)
 
     def close(self):
         try:

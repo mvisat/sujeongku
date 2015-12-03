@@ -265,6 +265,9 @@ class handler():
             return
 
         game = self.server.game(self.room_id)
+        if not game:
+            return
+
         msg_send = dict()
         msg_send[protocol.ACTION] = protocol.ACTION_GAME
         msg_send[protocol.PROP_BOARD] = game.board
@@ -282,8 +285,11 @@ class handler():
         if not self.room_id > 0:
             return
 
-        msg_broadcast = dict()
         game = self.server.game(self.room_id)
+        if not game:
+            return
+
+        msg_broadcast = dict()
         msg_broadcast[protocol.ACTION] = protocol.ACTION_GAME
         msg_broadcast[protocol.PROP_BOARD] = game.board
         msg_broadcast[protocol.PROP_TURN] = game.turn

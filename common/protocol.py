@@ -4,6 +4,8 @@ Module containing protocol constants
 
 INVALID_ID = -1
 
+PROTO_END = "\n"
+
 ACTION = "action"
 ACTION_LOGIN = "login"
 ACTION_LOGOUT = "logout"

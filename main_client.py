@@ -4,6 +4,7 @@ import sys
 import signal
 import errno
 import time
+import argparse
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -37,9 +38,9 @@ class dialog_highscore(QDialog, Ui_dialog_highscore):
 
 class window_main(QMainWindow, Ui_window_main):
 
-    def __init__(self, parent=None):
+    def __init__(self, host, port, parent=None):
         super(window_main, self).__init__(parent)
-        self.__conn = connection.connection()
+        self.__conn = connection.connection(host=host, port=port)
         self.client = client.client(self.__conn)
         self.handler = handler.handler(self.__conn)
         self.thread = QThread()
@@ -404,8 +405,13 @@ class window_main(QMainWindow, Ui_window_main):
         self.statusBar().showMessage("{room_name} | {room_status}".format(room_name=room_name, room_status=room_status))
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("host", type=str, help="server host")
+    parser.add_argument("port", type=int, help="server port")
+    args = parser.parse_args()
+
     app = QApplication(sys.argv)
-    window = window_main()
+    window = window_main(args.host, args.port)
     timer = QTimer()
     timer.timeout.connect(window.check_connection)
     timer.start(1000)
