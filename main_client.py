@@ -19,6 +19,20 @@ from client import client
 
 from client.ui.window_main import Ui_window_main
 from client.ui.dialog_highscore import Ui_dialog_highscore
+from client.ui.dialog_about import Ui_dialog_about
+
+
+class dialog_about(QDialog, Ui_dialog_about):
+
+    def __init__(self, parent=None):
+        QDialog.__init__(self, parent)
+        self.setupUi(self)
+
+    def accept(self):
+        super(dialog_about, self).accept()
+
+    def reject(self):
+        super(dialog_about, self).reject()
 
 
 class dialog_highscore(QDialog, Ui_dialog_highscore):
@@ -26,7 +40,6 @@ class dialog_highscore(QDialog, Ui_dialog_highscore):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
-
 
     def accept(self):
         super(dialog_highscore, self).accept()
@@ -171,7 +184,8 @@ class window_main(QMainWindow, Ui_window_main):
 
 
     def button_about_click(self):
-        pass
+        dialog = dialog_about(self)
+        dialog.exec_()
 
 
     def button_highscore_click(self):

@@ -1,6 +1,9 @@
 <RCC>
-  <qresource prefix="icon">
-    <file>refresh.png</file>
-    <file>send.png</file>
-  </qresource>
+    <qresource prefix="/icon">
+        <file>refresh.png</file>
+        <file>send.png</file>
+    </qresource>
+    <qresource prefix="/image">
+        <file>sujeongku.png</file>
+    </qresource>
 </RCC>
