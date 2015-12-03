@@ -1,7 +1,8 @@
+import operator
+import threading
+
 from common import protocol
 from common import sujeongku
-
-import threading
 
 class server:
 
@@ -27,6 +28,9 @@ class server:
         # user id -> [room id]
         self.user_room = dict()
 
+        self.__highscore_limit = 10
+        self.scoreboard = dict()
+
 
     def login(self, name):
         with self.__player_lock:
@@ -49,7 +53,16 @@ class server:
 
 
     def room_list(self):
-        return self.rooms
+        rooms = dict()
+        for room_id, (name, size) in self.rooms.items():
+            if room_id not in self.room_game:
+                continue
+            game = self.room_game[room_id]
+            if  game.status == sujeongku.STATUS_PLAYING or \
+                game.status == sujeongku.STATUS_WAITING:
+                current_size = len(game.players)
+                rooms[room_id] = (name, size, current_size)
+        return rooms
 
 
     def create(self, id, name, size):
@@ -100,30 +113,38 @@ class server:
         with self.__room_lock:
             if (id not in self.user_id) or (id not in self.user_room):
                 return -1
+
+            # delete him from user room
             room_id = self.user_room[id]
+            del self.user_room[id]
+
             if room_id not in self.room_player or room_id not in self.room_spectator:
                 return -1
             room_player = self.room_player[room_id]
             room_spectator = self.room_spectator[room_id]
+
+            # user is playing in the room
             if id in room_player:
                 room_player.remove(id)
+                # remove from the game
                 if room_id in self.room_game:
                     game = self.room_game[room_id]
                     game.remove_player(id)
-                    if len(game.players) == 0:
-                        if room_id in self.rooms:
-                            del self.rooms[room_id]
-                        if room_id in self.room_game:
-                            del self.room_game[room_id]
-                        if room_id in self.room_size:
-                            del self.room_size[room_id]
-                        if room_id in self.room_player:
-                            del self.room_player[room_id]
+                    game.next_turn()
+            # user is spectating the room
             elif id in room_spectator:
                 room_spectator.remove(id)
 
-            if id in self.user_room:
-                del self.user_room[id]
+            # delete the room if there is no player or spectator
+            if len(room_player) == 0 and len(room_spectator) == 0:
+                if room_id in self.rooms:
+                    del self.rooms[room_id]
+                if room_id in self.room_game:
+                    del self.room_game[room_id]
+                if room_id in self.room_size:
+                    del self.room_size[room_id]
+                if room_id in self.room_player:
+                    del self.room_player[room_id]
             return 1
 
 
@@ -162,6 +183,10 @@ class server:
         return self.room_game[room_id]
 
 
+    # return list of highscore, descending, limit to __highscore_limit
+    def highscore(self):
+        return sorted(self.scoreboard.items(), key=operator.itemgetter(1), reverse=True)[:self.__highscore_limit]
+
+
     def exit(self, id):
-        self.leave(id)
         self.logout(id)

@@ -4,6 +4,7 @@ MIN_ROOM_SIZE = 1
 MAX_ROOM_SIZE = 5
 
 STATUS_INVALID = -1
+STATUS_WAITING = 0
 STATUS_PLAYING = 1
 STATUS_DRAW = 2
 STATUS_FINISHED = 3
@@ -20,19 +21,20 @@ class game:
         self.spectators = []
         self.board = [[STATUS_INVALID for i in range(COLUMN_SIZE)] for j in range(ROW_SIZE)]
         self.player_size = player_size
+        self.__turn_idx = -1
         self.turn = protocol.INVALID_ID
-        self.status = STATUS_INVALID
+        self.status = STATUS_WAITING
         self.winning_rows = []
         self.winning_columns = []
 
     def start(self):
-        if self.status != STATUS_INVALID:
+        if self.status != STATUS_WAITING:
             return
         if not self.players or len(self.players) < self.player_size:
             return
 
         self.status = STATUS_PLAYING
-        self.turn = self.players[0]
+        self.next_turn()
 
     def add_player(self, id):
         if id in self.players:
@@ -47,6 +49,15 @@ class game:
 
         self.players.remove(id)
         return 1
+
+    def next_turn(self):
+        if self.status != STATUS_PLAYING or len(self.players) == 0:
+            return -1
+
+        self.__turn_idx = (self.__turn_idx + 1) % len(self.players)
+        self.turn = self.players[self.__turn_idx]
+        return 1
+
 
     def move(self, id, row, column):
         if self.status != STATUS_PLAYING:
@@ -109,11 +120,9 @@ class game:
             c = column - i
             win = True
             for j in range(WIN_SEQUENCE):
-                print(r, c)
                 if  r < 0 or r >= ROW_SIZE or \
                     c < 0 or c >= COLUMN_SIZE or \
                     self.board[r][c] != id:
-                    print('hoam')
                     win = False
                     break
                 r, c = r + 1, c + 1
@@ -128,11 +137,9 @@ class game:
             c = column + i
             win = True
             for j in range(WIN_SEQUENCE):
-                print(r, c)
                 if  r < 0 or r >= ROW_SIZE or \
                     c < 0 or c >= COLUMN_SIZE or \
                     self.board[r][c] != id:
-                    print('hoam')
                     win = False
                     break
                 r, c = r + 1, c - 1
@@ -142,6 +149,5 @@ class game:
                 self.status = STATUS_FINISHED
                 return self.status
 
-        self.turn = self.players[(self.players.index(self.turn) + 1) % len(self.players)]
         self.status = STATUS_PLAYING
-        return self.status
+        return self.next_turn()

@@ -23,6 +23,7 @@ class handler(QtCore.QObject):
     on_refresh_player = QtCore.pyqtSignal()
     on_refresh_spectator = QtCore.pyqtSignal()
     on_chat = QtCore.pyqtSignal(dict, str)
+    on_highscore = QtCore.pyqtSignal(list)
 
     def __init__(self, conn):
         super(handler, self).__init__()
@@ -33,14 +34,17 @@ class handler(QtCore.QObject):
         self.symbols = dict()
 
         self.id = -1
-        self.nickname = ""
         self.rooms = list()
         self.rooms_idx = list()
         self.playing = False
         self.room_name = ""
+        self.on_room = False
+        self.highscore = list()
+
+        self.__symbol_list = "ⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏ"
+        self.__symbol_self = "☢"
 
         self.__keep_running = True
-
 
     def handle(self):
         while self.__keep_running:
@@ -54,7 +58,7 @@ class handler(QtCore.QObject):
                     else:
                         continue
 
-                msg_list = msg_recv.split("\n")
+                msg_list = msg_recv.split(protocol.PROTO_END)
                 for msg in msg_list:
                     if not msg:
                         continue
@@ -113,6 +117,7 @@ class handler(QtCore.QObject):
         status = message[protocol.PROP_STATUS]
         if status > 0:
             self.playing = True
+            self.on_room = True
             self.on_join_success.emit()
         else:
             self.playing = False
@@ -125,6 +130,7 @@ class handler(QtCore.QObject):
 
         status = message[protocol.PROP_STATUS]
         if status > 0:
+            self.on_room = True
             self.playing = False
             self.on_spectate_success.emit()
         else:
@@ -138,6 +144,7 @@ class handler(QtCore.QObject):
 
         status = message[protocol.PROP_STATUS]
         if status > 0:
+            self.on_room = True
             self.playing = True
             self.on_create_success.emit()
         else:
@@ -151,6 +158,7 @@ class handler(QtCore.QObject):
 
         status = message[protocol.PROP_STATUS]
         if status > 0:
+            self.on_room = False
             self.playing = False
             self.on_leave_success.emit()
         else:
@@ -183,6 +191,13 @@ class handler(QtCore.QObject):
         self.on_refresh_board.emit()
 
 
+    def recv_highscore(self, message):
+        if protocol.PROP_HIGHSCORE not in message:
+            return
+
+        self.on_highscore.emit(message[protocol.PROP_HIGHSCORE])
+
+
     def recv_player_list(self, message):
         if protocol.PROP_PLAYERS not in message:
             return
@@ -193,10 +208,10 @@ class handler(QtCore.QObject):
         for player in self.players:
             id = int(player[protocol.PROP_ID])
             if id == self.id:
-                self.symbols[id] = 'O'
+                self.symbols[id] = self.__symbol_self
             else:
-                self.symbols[id] = chr(ord('A')+idx)
-                idx = idx + 1
+                self.symbols[id] = self.__symbol_list[idx]
+                idx = (idx + 1) % len(self.__symbol_list)
         self.on_refresh_player.emit()
 
 

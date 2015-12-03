@@ -6,13 +6,11 @@ class client:
 
     def __init__(self, conn):
         self.__conn = conn
-        # self.__verbose = True
 
 
     def send(self, message):
         message = json.dumps(message)
-        # self.__verbose and print("Sending", len(message), "bytes:", message)
-        self.__conn.send(message + "\n")
+        self.__conn.send(message + protocol.PROTO_END)
 
 
     def login(self, nickname):
@@ -68,6 +66,12 @@ class client:
         msg_send[protocol.ACTION] = protocol.ACTION_MOVE
         msg_send[protocol.PROP_ROW] = row
         msg_send[protocol.PROP_COLUMN] = column
+        self.send(msg_send)
+
+
+    def highscore(self):
+        msg_send = {}
+        msg_send[protocol.ACTION] = protocol.ACTION_HIGHSCORE
         self.send(msg_send)
 
 

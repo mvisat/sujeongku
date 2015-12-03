@@ -5,6 +5,7 @@ import signal
 import errno
 import time
 import argparse
+import json
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -20,20 +21,18 @@ from client.ui.window_main import Ui_window_main
 from client.ui.dialog_highscore import Ui_dialog_highscore
 
 
-
 class dialog_highscore(QDialog, Ui_dialog_highscore):
 
     def __init__(self, parent=None):
-        super(dialog_highscore, self).__init__(parent)
-        self.ui = Ui_dialog_highscore()
-        self.ui.setupUi(self)
+        QDialog.__init__(self, parent)
+        self.setupUi(self)
+
 
     def accept(self):
         super(dialog_highscore, self).accept()
 
     def reject(self):
         super(dialog_highscore, self).reject()
-
 
 
 class window_main(QMainWindow, Ui_window_main):
@@ -98,6 +97,7 @@ class window_main(QMainWindow, Ui_window_main):
         self.handler.on_refresh_player.connect(self.on_refresh_player)
         self.handler.on_refresh_spectator.connect(self.on_refresh_spectator)
         self.handler.on_chat.connect(self.on_chat)
+        self.handler.on_highscore.connect(self.on_highscore)
         self.thread.started.connect(self.handler.handle)
         self.thread.start()
 
@@ -128,7 +128,7 @@ class window_main(QMainWindow, Ui_window_main):
             return
         if idx >= 0 and idx < len(self.handler.rooms_id):
             room_id = self.handler.rooms_id[idx]
-            name, size = self.handler.rooms[room_id]
+            name, _, _ = self.handler.rooms[room_id]
             self.handler.room_name = name
             self.client.join(room_id)
 
@@ -148,7 +148,7 @@ class window_main(QMainWindow, Ui_window_main):
             return
         if idx >= 0 and idx < len(self.handler.rooms_id):
             room_id = self.handler.rooms_id[idx]
-            name, size = self.handler.rooms[room_id]
+            name, _, _ = self.handler.rooms[room_id]
             self.handler.room_name = name
             self.client.spectate(room_id)
 
@@ -167,7 +167,7 @@ class window_main(QMainWindow, Ui_window_main):
 
 
     def button_leave_click(self):
-        pass
+        self.client.leave()
 
 
     def button_about_click(self):
@@ -175,8 +175,7 @@ class window_main(QMainWindow, Ui_window_main):
 
 
     def button_highscore_click(self):
-        dialog = dialog_highscore(self)
-        dialog.exec_()
+        self.client.highscore()
 
 
     def check_connection(self):
@@ -208,10 +207,8 @@ class window_main(QMainWindow, Ui_window_main):
 
         self.label_room_list.setEnabled(True)
         self.button_refresh.setEnabled(True)
-        self.list_room.setEnabled(True)
-        self.button_spectate.setEnabled(True)
-        self.button_join.setEnabled(True)
         self.label_room_create.setEnabled(True)
+        self.text_room.clear()
         self.text_room.setEnabled(True)
         self.label_room_size.setEnabled(True)
         self.spin_room_size.setEnabled(True)
@@ -219,13 +216,17 @@ class window_main(QMainWindow, Ui_window_main):
         self.button_leave.setEnabled(False)
 
         self.label_player.setEnabled(False)
+        self.list_player.clear()
         self.list_player.setEnabled(False)
 
         self.label_spectator.setEnabled(False)
+        self.list_spectator.clear()
         self.list_spectator.setEnabled(False)
 
         self.label_chat.setEnabled(False)
+        self.text_chat.clear()
         self.text_chat.setEnabled(False)
+        self.text_message.clear()
         self.text_message.setEnabled(False)
         self.button_send.setEnabled(False)
 
@@ -233,9 +234,10 @@ class window_main(QMainWindow, Ui_window_main):
             for j in range(sujeongku.COLUMN_SIZE):
                 button = self.__dict__["button_" + str(i) + "_" + str(j)]
                 button.setText("")
+                button.setStyleSheet("")
                 button.setEnabled(False)
 
-        self.statusBar().showMessage("Annyeong, {name}".format(name=self.handler.nickname))
+        self.statusBar().showMessage("Annyeong, {name}!".format(name=self.nickname))
         self.button_refresh.click()
         self.text_room.setFocus()
 
@@ -269,7 +271,7 @@ class window_main(QMainWindow, Ui_window_main):
                 button.setText("")
                 button.setEnabled(False)
 
-        self.statusBar().showMessage("Room " + self.handler.room_name + " | Waiting players to start...")
+        self.statusBar().showMessage("Room " + self.handler.room_name + " | Waiting  players to start...")
         self.text_message.setFocus()
 
 
@@ -283,8 +285,8 @@ class window_main(QMainWindow, Ui_window_main):
 
     def on_refresh_room(self):
         self.list_room.clear()
-        for (name, size) in self.handler.rooms.values():
-            self.list_room.addItem(name)
+        for (name, size, current_size) in self.handler.rooms.values():
+            self.list_room.addItem("({current_size}/{size}) {name}".format(size=size, current_size=current_size, name=name))
 
         enabled = len(self.handler.rooms) > 0
         self.list_room.setEnabled(enabled)
@@ -310,10 +312,10 @@ class window_main(QMainWindow, Ui_window_main):
         QMessageBox.critical(self, "Error", "Failed to create the room")
 
     def on_leave_success(self):
-        pass
+        self.__on_lobby()
 
     def on_leave_fail(self):
-        pass
+        QMessageBox.critical(self, "Error", "Failed to leave the room")
 
     def on_chat(self, sender, content):
         name = sender[protocol.PROP_NAME]
@@ -332,15 +334,34 @@ class window_main(QMainWindow, Ui_window_main):
 
     def on_refresh_spectator(self):
         self.list_spectator.clear()
-        for player in self.handler.spectators:
+        for spectator in self.handler.spectators:
             id = int(spectator[protocol.PROP_ID])
             name = str(spectator[protocol.PROP_NAME])
             if id == self.handler.id:
                 name = name + " (You)"
             self.list_spectator.addItem(name)
 
-    def on_refresh_board(self):
+    def on_highscore(self, highscore):
+        # convert list of score to string
+        scores = ["#. Nickname | Score", "-"*50]
+        i = 1
+        for score in highscore:
+            player_score = []
+            for item in score:
+                player_score.append(str(item))
+            scores.append(str(i) + ". " + " | ".join(player_score))
+            i = i + 1
 
+        # show the dialog
+        dialog = dialog_highscore(self)
+        dialog.text_highscore.setText("\n".join(scores))
+        dialog.exec_()
+
+    def on_refresh_board(self):
+        if not self.handler.on_room:
+            return
+
+        # set button according to board status
         for i in range(sujeongku.ROW_SIZE):
             for j in range(sujeongku.COLUMN_SIZE):
                 button = self.__dict__["button_" + str(i) + "_" + str(j)]
@@ -403,6 +424,7 @@ class window_main(QMainWindow, Ui_window_main):
         else:
             room_status = "Spectating the game..."
         self.statusBar().showMessage("{room_name} | {room_status}".format(room_name=room_name, room_status=room_status))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

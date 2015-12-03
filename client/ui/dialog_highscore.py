@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'highscore.ui'
+# Form implementation generated from reading ui file 'dialog_highscore.ui'
 #
 # Created by: PyQt5 UI code generator 5.5.1
 #
@@ -16,9 +16,10 @@ class Ui_dialog_highscore(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-        self.textEdit = QtWidgets.QTextEdit(dialog_highscore)
-        self.textEdit.setObjectName("textEdit")
-        self.verticalLayout.addWidget(self.textEdit)
+        self.text_highscore = QtWidgets.QTextEdit(dialog_highscore)
+        self.text_highscore.setReadOnly(True)
+        self.text_highscore.setObjectName("text_highscore")
+        self.verticalLayout.addWidget(self.text_highscore)
         self.buttonBox = QtWidgets.QDialogButtonBox(dialog_highscore)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Close)
@@ -34,4 +35,14 @@ class Ui_dialog_highscore(object):
     def retranslateUi(self, dialog_highscore):
         _translate = QtCore.QCoreApplication.translate
         dialog_highscore.setWindowTitle(_translate("dialog_highscore", "Highscore"))
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    dialog_highscore = QtWidgets.QDialog()
+    ui = Ui_dialog_highscore()
+    ui.setupUi(dialog_highscore)
+    dialog_highscore.show()
+    sys.exit(app.exec_())
 
