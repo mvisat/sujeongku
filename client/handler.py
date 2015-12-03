@@ -29,12 +29,13 @@ class handler(QtCore.QObject):
         self.__conn = conn
 
         self.game = sujeongku.game()
-        self.players = []
+        self.players = list()
+        self.symbols = dict()
 
         self.id = -1
         self.nickname = ""
-        self.rooms = []
-        self.rooms_idx = []
+        self.rooms = list()
+        self.rooms_idx = list()
         self.playing = False
         self.room_name = ""
 
@@ -187,6 +188,15 @@ class handler(QtCore.QObject):
             return
 
         self.players = message[protocol.PROP_PLAYERS]
+
+        idx = 0
+        for player in self.players:
+            id = int(player[protocol.PROP_ID])
+            if id == self.id:
+                self.symbols[id] = 'O'
+            else:
+                self.symbols[id] = chr(ord('A')+idx)
+                idx = idx + 1
         self.on_refresh_player.emit()
 
 

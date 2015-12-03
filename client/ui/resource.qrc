@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="icon">
+    <file>refresh.png</file>
+    <file>send.png</file>
+  </qresource>
+</RCC>

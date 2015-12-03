@@ -69,8 +69,9 @@ class window_main(QMainWindow, Ui_window_main):
         self.button_spectate.clicked.connect(self.button_spectate_click)
         self.button_create.clicked.connect(self.button_create_click)
         self.button_send.clicked.connect(self.button_send_click)
+        self.button_leave.clicked.connect(self.button_leave_click)
+        self.button_about.clicked.connect(self.button_about_click)
         self.button_highscore.clicked.connect(self.button_highscore_click)
-        self.button_exit.clicked.connect(self.close)
         for i in range(sujeongku.ROW_SIZE):
             for j in range(sujeongku.COLUMN_SIZE):
                 button = self.__dict__["button_" + str(i) + "_" + str(j)]
@@ -155,9 +156,21 @@ class window_main(QMainWindow, Ui_window_main):
         name = self.text_room.text().strip()
         if len(name) > 0:
             self.handler.room_name = name
-            self.client.create(name, 1)
+            size = self.spin_room_size.value()
+            if sujeongku.MIN_ROOM_SIZE <= size <= sujeongku.MAX_ROOM_SIZE:
+                self.client.create(name, size)
+            else:
+                QMessageBox.critical(self, "Error", "Invalid room size")
         else:
             self.text_room.setFocus()
+
+
+    def button_leave_click(self):
+        pass
+
+
+    def button_about_click(self):
+        pass
 
 
     def button_highscore_click(self):
@@ -199,7 +212,16 @@ class window_main(QMainWindow, Ui_window_main):
         self.button_join.setEnabled(True)
         self.label_room_create.setEnabled(True)
         self.text_room.setEnabled(True)
+        self.label_room_size.setEnabled(True)
+        self.spin_room_size.setEnabled(True)
         self.button_create.setEnabled(True)
+        self.button_leave.setEnabled(False)
+
+        self.label_player.setEnabled(False)
+        self.list_player.setEnabled(False)
+
+        self.label_spectator.setEnabled(False)
+        self.list_spectator.setEnabled(False)
 
         self.label_chat.setEnabled(False)
         self.text_chat.setEnabled(False)
@@ -212,7 +234,7 @@ class window_main(QMainWindow, Ui_window_main):
                 button.setText("")
                 button.setEnabled(False)
 
-        self.statusBar().showMessage("")
+        self.statusBar().showMessage("Annyeong, {name}".format(name=self.handler.nickname))
         self.button_refresh.click()
         self.text_room.setFocus()
 
@@ -224,7 +246,16 @@ class window_main(QMainWindow, Ui_window_main):
         self.button_join.setEnabled(False)
         self.label_room_create.setEnabled(False)
         self.text_room.setEnabled(False)
+        self.label_room_size.setEnabled(False)
+        self.spin_room_size.setEnabled(False)
         self.button_create.setEnabled(False)
+        self.button_leave.setEnabled(True)
+
+        self.label_player.setEnabled(True)
+        self.list_player.setEnabled(True)
+
+        self.label_spectator.setEnabled(True)
+        self.list_spectator.setEnabled(True)
 
         self.label_chat.setEnabled(True)
         self.text_chat.setEnabled(True)
@@ -290,22 +321,24 @@ class window_main(QMainWindow, Ui_window_main):
         self.text_chat.appendPlainText("{name}: {content}".format(name=name, content=content))
 
     def on_refresh_player(self):
-        pass
-
-    def on_refresh_spectator(self):
-        pass
-
-    def on_refresh_board(self):
-        # TODO: change symbol
-        symbol = {}
-        idx = 0
+        self.list_player.clear()
         for player in self.handler.players:
             id = int(player[protocol.PROP_ID])
+            name = str(player[protocol.PROP_NAME])
             if id == self.handler.id:
-                symbol[id] = 'O'
-            else:
-                symbol[id] = chr(ord('A')+idx)
-                idx = idx + 1
+                name = name + " (You)"
+            self.list_player.addItem("{symbol} - {name}".format(symbol=self.handler.symbols[id], name=name))
+
+    def on_refresh_spectator(self):
+        self.list_spectator.clear()
+        for player in self.handler.spectators:
+            id = int(spectator[protocol.PROP_ID])
+            name = str(spectator[protocol.PROP_NAME])
+            if id == self.handler.id:
+                name = name + " (You)"
+            self.list_spectator.addItem(name)
+
+    def on_refresh_board(self):
 
         for i in range(sujeongku.ROW_SIZE):
             for j in range(sujeongku.COLUMN_SIZE):
@@ -316,7 +349,7 @@ class window_main(QMainWindow, Ui_window_main):
                     button.setText("")
                 else:
                     button.setEnabled(False)
-                    button.setText(symbol[id])
+                    button.setText(self.handler.symbols[id])
 
         # a player has been disconnected
         if self.handler.game.status == -10:
