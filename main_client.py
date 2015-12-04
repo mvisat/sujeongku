@@ -97,6 +97,8 @@ class window_main(QMainWindow, Ui_window_main):
         self.handler.moveToThread(self.thread)
         self.handler.on_login_success.connect(self.on_login_success)
         self.handler.on_login_fail.connect(self.on_login_fail)
+        self.handler.on_logout_success.connect(self.on_logout_success)
+        self.handler.on_logout_fail.connect(self.on_logout_fail)
         self.handler.on_refresh_room.connect(self.on_refresh_room)
         self.handler.on_join_success.connect(self.on_join_success)
         self.handler.on_join_fail.connect(self.on_join_fail)
@@ -123,11 +125,15 @@ class window_main(QMainWindow, Ui_window_main):
 
 
     def button_login_click(self):
-        self.nickname = self.text_nickname.text().strip()
-        if len(self.nickname) > 0 and self.handler.id == protocol.INVALID_ID:
-            self.client.login(self.nickname)
+        # login procedure
+        if self.handler.id == protocol.INVALID_ID:
+            self.nickname = self.text_nickname.text().strip()
+            if len(self.nickname) > 0:
+                self.client.login(self.nickname)
+            else:
+                self.text_nickname.setFocus()
         else:
-            self.text_nickname.setFocus()
+            self.client.logout()
 
 
     def button_refresh_click(self):
@@ -202,6 +208,7 @@ class window_main(QMainWindow, Ui_window_main):
         self.label_nickname.setEnabled(True)
         self.text_nickname.setEnabled(True)
         self.button_login.setEnabled(True)
+        self.button_login.setText("Login")
 
         self.label_room_list.setEnabled(False)
         self.button_refresh.setEnabled(False)
@@ -211,13 +218,17 @@ class window_main(QMainWindow, Ui_window_main):
         self.label_room_create.setEnabled(False)
         self.text_room.setEnabled(False)
         self.button_create.setEnabled(False)
-
+        self.label_room_size.setEnabled(False)
+        self.spin_room_size.setEnabled(False)
+        self.button_create.setEnabled(False)
+        self.button_leave.setEnabled(False)
         self.text_nickname.setFocus()
 
     def __on_lobby(self):
         self.label_nickname.setEnabled(False)
         self.text_nickname.setEnabled(False)
-        self.button_login.setEnabled(False)
+        self.button_login.setEnabled(True)
+        self.button_login.setText("Logout")
 
         self.label_room_list.setEnabled(True)
         self.button_refresh.setEnabled(True)
@@ -256,6 +267,8 @@ class window_main(QMainWindow, Ui_window_main):
         self.text_room.setFocus()
 
     def __on_room(self):
+        self.button_login.setEnabled(False)
+
         self.label_room_list.setEnabled(False)
         self.button_refresh.setEnabled(False)
         self.list_room.setEnabled(False)
@@ -285,7 +298,7 @@ class window_main(QMainWindow, Ui_window_main):
                 button.setText("")
                 button.setEnabled(False)
 
-        self.statusBar().showMessage("Room " + self.handler.room_name + " | Waiting  players to start...")
+        self.statusBar().showMessage("Room " + self.handler.room_name + " | Waiting for more players")
         self.text_message.setFocus()
 
 
@@ -296,6 +309,13 @@ class window_main(QMainWindow, Ui_window_main):
 
     def on_login_fail(self):
         QMessageBox.critical(self, "Error", "Nickname already taken")
+
+    def on_logout_success(self):
+        self.nickname = ""
+        self.__on_outside()
+
+    def on_logout_fail(self):
+        QMessageBox.critical(self, "Error", "Failed to logout")
 
     def on_refresh_room(self):
         self.list_room.clear()

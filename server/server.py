@@ -53,6 +53,8 @@ class server:
                 del self.user_name[id]
                 if name in self.user_names:
                     self.user_names.remove(name)
+                    return 1
+        return -1
 
 
     def room_list(self):
@@ -152,10 +154,7 @@ class server:
                     game.remove_player(id)
 
                     # if player size < allowed minimum, abort the game
-                    print("wew")
-                    print(len(game.players))
                     if len(game.players) < sujeongku.MIN_ROOM_SIZE:
-                        print("huff")
                         game.status = sujeongku.STATUS_ABORT
                         game.turn = protocol.INVALID_ID
 

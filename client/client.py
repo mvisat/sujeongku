@@ -20,6 +20,12 @@ class client:
         self.send(msg_send)
 
 
+    def logout(self):
+        msg_send = {}
+        msg_send[protocol.ACTION] = protocol.ACTION_LOGOUT
+        self.send(msg_send)
+
+
     def refresh(self):
         msg_send = {}
         msg_send[protocol.ACTION] = protocol.ACTION_ROOM_LIST

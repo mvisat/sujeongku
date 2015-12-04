@@ -36,9 +36,11 @@ class connection():
                     if self.socket in ready_to_reads:
                         self.ready_to_read = True
                         recv_msg = self.socket.recv(self.buf_size).decode('utf-8')
+                        if not recv_msg:
+                            break
                         val.append(recv_msg)
                         self.__verbose and print("Received", len(recv_msg), "bytes:", recv_msg.strip())
-                        if recv_msg.endswith(protocol.PROTO_END) or not recv_msg:
+                        if recv_msg.endswith(protocol.PROTO_END):
                             break
             except select.error:
                 pass

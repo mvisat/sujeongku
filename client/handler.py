@@ -10,6 +10,8 @@ class handler(QtCore.QObject):
 
     on_login_success = QtCore.pyqtSignal()
     on_login_fail = QtCore.pyqtSignal()
+    on_logout_success = QtCore.pyqtSignal()
+    on_logout_fail = QtCore.pyqtSignal()
     on_refresh_room = QtCore.pyqtSignal()
     on_join_success = QtCore.pyqtSignal()
     on_join_fail = QtCore.pyqtSignal()
@@ -33,7 +35,7 @@ class handler(QtCore.QObject):
         self.players = list()
         self.symbols = dict()
 
-        self.id = -1
+        self.id = protocol.INVALID_ID
         self.rooms = list()
         self.rooms_idx = list()
         self.playing = False
@@ -98,7 +100,10 @@ class handler(QtCore.QObject):
 
         status = message[protocol.PROP_STATUS]
         if status > 0:
-            self.id = -1
+            self.id = protocol.INVALID_ID
+            self.on_logout_success.emit()
+        else:
+            self.on_logout_fail.emit()
 
 
     def recv_room_list(self, message):
