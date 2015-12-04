@@ -341,7 +341,7 @@ class handler():
         if room_id not in self.server.room_game:
             return
 
-        game = self.server.room_game[self.room_id]
+        game = self.server.room_game[room_id]
         if game.status == sujeongku.STATUS_FINISHED:
             return
 
