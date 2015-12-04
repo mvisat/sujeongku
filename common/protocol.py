@@ -20,7 +20,6 @@ ACTION_SPECTATOR_LIST = "spectator_list"
 ACTION_MOVE = "move"
 ACTION_GAME = "game"
 ACTION_HIGHSCORE = "highscore"
-ACTION_EXIT = "exit"
 
 PROP_ID = "id"
 PROP_ROOM_ID = "room_id"

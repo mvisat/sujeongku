@@ -2617,7 +2617,7 @@ class Ui_window_main(object):
         self.spin_room_size = QtWidgets.QSpinBox(self.centralwidget)
         self.spin_room_size.setEnabled(False)
         self.spin_room_size.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.spin_room_size.setMinimum(1)
+        self.spin_room_size.setMinimum(2)
         self.spin_room_size.setMaximum(10)
         self.spin_room_size.setProperty("value", 3)
         self.spin_room_size.setObjectName("spin_room_size")

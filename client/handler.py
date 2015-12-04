@@ -77,7 +77,7 @@ class handler(QtCore.QObject):
         if callable(recv_action):
             recv_action(message)
         else:
-            print("Action not implemented", action)
+            print("Action not implemented:", action)
 
 
     def recv_login(self, message):
@@ -178,16 +178,16 @@ class handler(QtCore.QObject):
     def recv_game(self, message):
         if  protocol.PROP_STATUS not in message or \
             protocol.PROP_TURN not in message or \
-            protocol.PROP_BOARD not in message or \
-            protocol.PROP_WINNING_ROWS not in message or \
-            protocol.PROP_WINNING_COLUMNS not in message:
+            protocol.PROP_BOARD not in message:
             return
 
+        if protocol.PROP_WINNING_ROWS in message:
+            self.game.winning_rows = message[protocol.PROP_WINNING_ROWS]
+        if protocol.PROP_WINNING_COLUMNS in message:
+            self.game.winning_columns = message[protocol.PROP_WINNING_COLUMNS]
         self.game.status = message[protocol.PROP_STATUS]
         self.game.turn = message[protocol.PROP_TURN]
         self.game.board = message[protocol.PROP_BOARD]
-        self.game.winning_rows = message[protocol.PROP_WINNING_ROWS]
-        self.game.winning_columns = message[protocol.PROP_WINNING_COLUMNS]
         self.on_refresh_board.emit()
 
 

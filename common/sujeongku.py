@@ -1,13 +1,14 @@
 from common import protocol
 
-MIN_ROOM_SIZE = 1
-MAX_ROOM_SIZE = 5
+MIN_ROOM_SIZE = 2
+MAX_ROOM_SIZE = 10
 
-STATUS_INVALID = -1
+STATUS_ABORT = -1
 STATUS_WAITING = 0
 STATUS_PLAYING = 1
 STATUS_DRAW = 2
-STATUS_FINISHED = 3
+STATUS_WIN = 3
+STATUS_FINISHED = 4
 
 ROW_SIZE = 20
 COLUMN_SIZE = 20
@@ -19,9 +20,8 @@ class game:
     def __init__(self, player_size=3):
         self.players = []
         self.spectators = []
-        self.board = [[STATUS_INVALID for i in range(COLUMN_SIZE)] for j in range(ROW_SIZE)]
+        self.board = [[protocol.INVALID_ID for i in range(COLUMN_SIZE)] for j in range(ROW_SIZE)]
         self.player_size = player_size
-        self.__turn_idx = -1
         self.turn = protocol.INVALID_ID
         self.status = STATUS_WAITING
         self.winning_rows = []
@@ -30,11 +30,12 @@ class game:
     def start(self):
         if self.status != STATUS_WAITING:
             return
-        if not self.players or len(self.players) < self.player_size:
+
+        if len(self.players) < self.player_size:
             return
 
         self.status = STATUS_PLAYING
-        self.next_turn()
+        self.turn = self.players[0]
 
     def add_player(self, id):
         if id in self.players:
@@ -47,6 +48,11 @@ class game:
         if id not in self.players:
             return -1
 
+        # if it's his turn, skip to next player
+        if id == self.turn:
+            self.next_turn()
+
+        # remove the player
         self.players.remove(id)
         return 1
 
@@ -54,8 +60,7 @@ class game:
         if self.status != STATUS_PLAYING or len(self.players) == 0:
             return -1
 
-        self.__turn_idx = (self.__turn_idx + 1) % len(self.players)
-        self.turn = self.players[self.__turn_idx]
+        self.turn = self.players[(self.players.index(self.turn) + 1) % len(self.players)]
         return 1
 
 
@@ -64,7 +69,7 @@ class game:
             return -1
 
         if 0 > row >= ROW_SIZE or 0 > column >= COLUMN_SIZE:
-            return STATUS_INVALID
+            return -1
 
         self.board[row][column] = id
 
@@ -73,12 +78,12 @@ class game:
         for i in range(ROW_SIZE):
             if not draw: break
             for j in range(COLUMN_SIZE):
-                if self.board[i][j] != STATUS_INVALID:
+                if self.board[i][j] == protocol.INVALID_ID:
                     draw = False
                     break
         if draw:
             self.status = STATUS_DRAW
-            return self.status
+            return 1
 
         # check vertically
         for i in range(row - WIN_SEQUENCE + 1, row + 1):
@@ -94,8 +99,8 @@ class game:
             if win:
                 self.winning_rows = [j for j in range(i, i + WIN_SEQUENCE)]
                 self.winning_columns = [column for j in range(WIN_SEQUENCE)]
-                self.status = STATUS_FINISHED
-                return STATUS_FINISHED
+                self.status = STATUS_WIN
+                return 1
 
         # check horizontally
         for i in range(column - WIN_SEQUENCE + 1, column + 1):
@@ -111,10 +116,10 @@ class game:
             if win:
                 self.winning_rows = [row for j in range(WIN_SEQUENCE)]
                 self.winning_columns = [j for j in range(i, i + WIN_SEQUENCE)]
-                self.status = STATUS_FINISHED
-                return self.status
+                self.status = STATUS_WIN
+                return 1
 
-        # check diagonally
+        # check diagonally from bottom-right to top-left
         for i in range(WIN_SEQUENCE):
             r = row - i
             c = column - i
@@ -129,9 +134,10 @@ class game:
             if win:
                 self.winning_rows = [j for j in range(row - i, row - i + WIN_SEQUENCE)]
                 self.winning_columns = [j for j in range(column - i, column - i + WIN_SEQUENCE)]
-                self.status = STATUS_FINISHED
-                return self.status
+                self.status = STATUS_WIN
+                return 1
 
+        # check diagonally from bottom-left to top-right
         for i in range(WIN_SEQUENCE):
             r = row - i
             c = column + i
@@ -146,8 +152,8 @@ class game:
             if win:
                 self.winning_rows = [j for j in range(row - i, row - i + WIN_SEQUENCE)]
                 self.winning_columns = [j for j in range(column + i, column + i - WIN_SEQUENCE, -1)]
-                self.status = STATUS_FINISHED
-                return self.status
+                self.status = STATUS_WIN
+                return 1
 
         self.status = STATUS_PLAYING
         return self.next_turn()

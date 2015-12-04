@@ -385,22 +385,46 @@ class window_main(QMainWindow, Ui_window_main):
                     button.setText("")
                 else:
                     button.setEnabled(False)
-                    button.setText(self.handler.symbols[id])
+                    still_playing = False
+                    for player in self.handler.players:
+                        if player[protocol.PROP_ID] == id:
+                            still_playing = True
+                            break
+                    if still_playing:
+                        button.setText(self.handler.symbols[id])
+                    else:
+                        button.setText("-")
 
-        # a player has been disconnected
-        if self.handler.game.status == -10:
-            QMessageBox.warning(self, "Warning", "Someone has disconnected from this game")
+        room_name = "Room " + self.handler.room_name
+        room_status = ""
+
+        # game is aborted
+        if self.handler.game.status == sujeongku.STATUS_ABORT:
+            QMessageBox.critical(self, "Huft :(", "Game is aborted because someone has left!")
+            room_status = "Game aborted"
 
         # still playing
         elif self.handler.game.status == sujeongku.STATUS_PLAYING:
-            pass
+            if self.handler.playing:
+                room_status = "Game on, "
+            else:
+                room_status = "Spectating the game, "
+
+            if self.handler.game.turn == self.handler.id:
+                room_status += "now it's your turn!"
+            else:
+                for player in self.handler.players:
+                    if self.handler.game.turn == player[protocol.PROP_ID]:
+                        room_status += "waiting player {name} to move...".format(name=player[protocol.PROP_NAME])
+                        break
 
         # draw
         elif self.handler.game.status == sujeongku.STATUS_DRAW:
-            QMessageBox.information(self, "Draw!", "")
+            QMessageBox.information(self, "Draw!", "No one wins this game!")
+            room_status = "Game ends in draw"
 
         # someone has win
-        elif self.handler.game.status == sujeongku.STATUS_FINISHED:
+        elif self.handler.game.status == sujeongku.STATUS_WIN:
             winner_name = ""
             for player in self.handler.players:
                 if player[protocol.PROP_ID] == self.handler.game.turn:
@@ -423,20 +447,14 @@ class window_main(QMainWindow, Ui_window_main):
             if self.handler.playing:
                 if self.handler.game.turn == self.handler.id:
                     QMessageBox.information(self, "Win!", "Congrats! You win this game!")
+                    room_status = "You are the winner!"
                 else:
                     QMessageBox.information(self, "Lose!", "Aw, player {winner} win this game :(".format(winner=winner_name))
+                    room_status = "Hah! Loser"
             else:
                 QMessageBox.information(self, "Finished!", "Player {winner} win this game!".format(winner=winner_name))
-            return
+                room_status = "Player {winner} is the winner".format(winner=winner_name)
 
-        room_name = "Room " + self.handler.room_name
-        if self.handler.playing:
-            if self.handler.game.turn == self.handler.id:
-                room_status = "Now it's your turn!"
-            else:
-                room_status = "Waiting other players to move..."
-        else:
-            room_status = "Spectating the game..."
         self.statusBar().showMessage("{room_name} | {room_status}".format(room_name=room_name, room_status=room_status))
 
 

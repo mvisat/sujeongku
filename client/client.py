@@ -76,7 +76,4 @@ class client:
 
 
     def exit(self):
-        msg_send = {}
-        msg_send[protocol.ACTION] = protocol.ACTION_EXIT
-        self.send(msg_send)
         self.__conn.close()

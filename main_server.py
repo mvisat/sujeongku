@@ -9,7 +9,5 @@ if __name__ == '__main__':
     parser.add_argument("port", type=int, help="port to bind")
     args = parser.parse_args()
 
-    try:
-        listener.listener(port=args.port).serve_forever()
-    except KeyboardInterrupt:
-        print("Terminated by user")
+    listener.listener(port=args.port).serve_forever()
+

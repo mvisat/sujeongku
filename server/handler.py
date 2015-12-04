@@ -7,46 +7,63 @@ from common import sujeongku
 
 class handler():
 
-    def __init__(self, server, socket, addr, handlers, handler_lock):
+    def __init__(self, server, socket, addr):
         self.server = server
         self.socket = socket
-        self.socket.setblocking(0)
         self.addr = addr
+        self.socket.setblocking(0)
         self.buf_size = 4096
-        self.handlers = handlers
-        self.__handler_lock = handler_lock
         self.__verbose = True
 
         self.id = -1
         self.room_id = -1
         self.nickname = ""
         self.connected = True
-        self.__keep_running = True
+        self.keep_running = True
         self.thread = threading.Thread(target=self.handle)
         self.thread.Daemon = True
         self.thread.start()
 
 
     def close(self):
+        self.keep_running = False
         self.server.exit(self.id)
-        self.__keep_running = False
+        self.broadcast_player_list(self.room_id)
+        self.broadcast_spectator_list(self.room_id)
+        self.broadcast_game(self.room_id)
+        if self in self.server.handlers:
+            self.server.handlers.remove(self)
+        self.socket.close()
 
 
     def handle(self):
-        while self.__keep_running:
+        while self.keep_running and self.server.keep_running:
             try:
-                socket_ready_to_read, _, _ = select.select([self.socket], [], [], 0.5)
-                if self.socket not in socket_ready_to_read:
-                    continue
-                message = self.socket.recv(self.buf_size).decode('utf-8')
-                self.__verbose and print("Received", message.strip())
+                messages = list()
+                while self.keep_running and self.server.keep_running:
 
-                if len(message) == 0:
-                    self.__verbose and print("Client", str(self.addr) ,"disconnected, exiting...")
-                    self.recv_exit(None)
-                    break
+                    # check socket if it is ready to read
+                    socket_ready_to_read, _, _ = select.select([self.socket], [], [], 0.5)
+                    if self.socket not in socket_ready_to_read:
+                        continue
 
-                self.recv(message)
+                    # receive the packet
+                    message = self.socket.recv(self.buf_size).decode('utf-8')
+
+                    # client is disconnected
+                    if len(message) == 0:
+                        self.__verbose and print("Client", str(self.addr) ,"disconnected, exiting...")
+                        self.close()
+                        return
+
+                    self.__verbose and print("Received", len(message), "bytes:", message.strip())
+                    messages.append(message)
+
+                    # keep recv until PROTO_END is received
+                    if message.endswith(protocol.PROTO_END):
+                        break
+
+                self.recv("".join(messages))
 
             except select.error:
                 pass
@@ -75,8 +92,14 @@ class handler():
         except ValueError:
             pass
 
+        except KeyError:
+            pass
+
 
     def send(self, message):
+        if not self.keep_running:
+            return
+
         message = json.dumps(message)
         self.__verbose and print("Sending", len(message), "bytes:", message)
         self.socket.sendall((message + protocol.PROTO_END).encode())
@@ -84,12 +107,15 @@ class handler():
 
     def broadcast(self, room_id, message):
         message = json.dumps(message)
-        self.__verbose and print("Broadcasting to room id:", room_id, len(message), "bytes:" ,message)
+        self.__verbose and print("Broadcasting", len(message), "bytes:", message)
         message = (message + protocol.PROTO_END).encode()
-        with self.__handler_lock:
-            for handler in self.handlers:
-                if room_id == handler.room_id:
-                    handler.socket.sendall(message)
+        with self.server.handlers_lock:
+            for handler in self.server.handlers:
+                if room_id != handler.room_id:
+                    continue
+                if not handler.keep_running:
+                    continue
+                handler.socket.sendall(message)
 
 
     """
@@ -120,6 +146,7 @@ class handler():
         status = self.server.logout(self.id)
         if status > 0:
             self.id = -1
+            self.nickname = ""
 
         msg_send = dict()
         msg_send[protocol.ACTION] = message[protocol.ACTION]
@@ -153,12 +180,18 @@ class handler():
         if status > 0:
             self.broadcast_player_list(self.room_id)
 
+            if self.room_id not in self.server.room_game:
+                return
+
             # start the game if full
-            if len(self.server.player_list(self.room_id)) >= self.server.room_size[self.room_id]:
-                self.server.game(self.room_id).start()
-                self.broadcast_player_list(self.room_id)
-                self.broadcast_spectator_list(self.room_id)
-                self.broadcast_game(self.room_id)
+            game = self.server.room_game[self.room_id]
+            if len(game.players) < game.player_size:
+                return
+
+            game.start()
+            self.broadcast_player_list(self.room_id)
+            self.broadcast_spectator_list(self.room_id)
+            self.broadcast_game(self.room_id)
 
 
     def recv_join(self, message):
@@ -178,10 +211,17 @@ class handler():
         if status > 0:
             self.broadcast_player_list(self.room_id)
             self.broadcast_spectator_list(self.room_id)
+
+            if self.room_id not in self.server.room_game:
+                return
+
             # start the game if full
-            if len(self.server.room_player[room_id]) >= self.server.room_size[room_id]:
-                self.server.game(room_id).start()
-                self.broadcast_game(self.room_id)
+            game = self.server.room_game[self.room_id]
+            if len(game.players) < game.player_size:
+                return
+
+            game.start()
+            self.broadcast_game(self.room_id)
 
 
     def recv_spectate(self, message):
@@ -232,11 +272,6 @@ class handler():
         column = int(message[protocol.PROP_COLUMN])
         status = self.server.move(self.id, row, column)
 
-        msg_send = dict()
-        msg_send[protocol.ACTION] = message[protocol.ACTION]
-        msg_send[protocol.PROP_STATUS] = status
-        self.send(msg_send)
-
         if status > 0:
             self.broadcast_game(self.room_id)
 
@@ -254,13 +289,6 @@ class handler():
         msg_send[protocol.ACTION] = message[protocol.ACTION]
         msg_send[protocol.PROP_HIGHSCORE] = highscore
         self.send(msg_send)
-
-
-    def recv_exit(self, message):
-        self.close()
-        self.broadcast_player_list(self.room_id)
-        self.broadcast_spectator_list(self.room_id)
-        self.broadcast_game(self.room_id)
 
 
     """
@@ -289,10 +317,10 @@ class handler():
         if not self.room_id > 0:
             return
 
-        game = self.server.game(self.room_id)
-        if not game:
+        if self.room_id not in self.server.room_game:
             return
 
+        game = self.server.room_game[self.room_id]
         msg_send = dict()
         msg_send[protocol.ACTION] = protocol.ACTION_GAME
         msg_send[protocol.PROP_BOARD] = game.board
@@ -310,8 +338,11 @@ class handler():
         if not room_id > 0:
             return
 
-        game = self.server.game(room_id)
-        if not game or game.status == sujeongku.STATUS_INVALID:
+        if room_id not in self.server.room_game:
+            return
+
+        game = self.server.room_game[self.room_id]
+        if game.status == sujeongku.STATUS_FINISHED:
             return
 
         msg_broadcast = dict()
@@ -319,13 +350,14 @@ class handler():
         msg_broadcast[protocol.PROP_BOARD] = game.board
         msg_broadcast[protocol.PROP_TURN] = game.turn
         msg_broadcast[protocol.PROP_STATUS] = game.status
-        msg_broadcast[protocol.PROP_WINNING_ROWS] = game.winning_rows
-        msg_broadcast[protocol.PROP_WINNING_COLUMNS] = game.winning_columns
+        if game.status == sujeongku.STATUS_WIN:
+            msg_broadcast[protocol.PROP_WINNING_ROWS] = game.winning_rows
+            msg_broadcast[protocol.PROP_WINNING_COLUMNS] = game.winning_columns
         self.broadcast(room_id, msg_broadcast)
 
         # update the highscore if win
-        if game.status == sujeongku.STATUS_FINISHED and game.turn in self.server.user_id:
-            player_name = self.server.user_id[game.turn]
+        if game.status == sujeongku.STATUS_WIN and game.turn in self.server.user_name:
+            player_name = self.server.user_name[game.turn]
             # player already on the scoreboard
             if player_name in self.server.scoreboard:
                 score = self.server.scoreboard[player_name] + 1
@@ -333,10 +365,11 @@ class handler():
                 score = 1
             self.server.scoreboard[player_name] = score
 
-        # if already finished, mark as invalid to avoid re-broadcast
-        if game.status == sujeongku.STATUS_DRAW or game.status == sujeongku.STATUS_FINISHED:
-            game.status = sujeongku.STATUS_INVALID
-
+        # mark as finished to avoid re-broadcast
+        if  game.status == sujeongku.STATUS_DRAW or \
+            game.status == sujeongku.STATUS_WIN or \
+            game.status == sujeongku.STATUS_ABORT:
+            game.status = sujeongku.STATUS_FINISHED
 
 
     def broadcast_player_list(self, room_id):
